@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vehicle Speed Detection</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Audiowide&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: #0d0208;
+      min-height: 100vh;
+      color: #ffd60a;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Animated Background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(ellipse at 10% 20%, rgba(255, 87, 51, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 90% 80%, rgba(0, 180, 216, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(255, 214, 10, 0.08) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Hexagon Pattern */
+    .bg-pattern {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        repeating-linear-gradient(0deg, rgba(255, 87, 51, 0.03) 0px, transparent 1px, transparent 40px, rgba(255, 87, 51, 0.03) 41px),
+        repeating-linear-gradient(90deg, rgba(255, 87, 51, 0.03) 0px, transparent 1px, transparent 40px, rgba(255, 87, 51, 0.03) 41px);
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 0;
+      animation: patternShift 30s linear infinite;
+    }
+
+    @keyframes patternShift {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(40px, 40px); }
+    }
+
+    /* Welcome Screen */
+    .welcome-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      background: linear-gradient(135deg, #0d0208 0%, #1a0e0a 50%, #0d0208 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+
+    .welcome-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .welcome-content {
+      text-align: center;
+      max-width: 900px;
+      padding: 40px;
+      animation: welcomeSlideUp 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      z-index: 1;
+    }
+
+    @keyframes welcomeSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(100px) scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .welcome-icon {
+      font-size: 9em;
+      margin-bottom: 30px;
+      animation: pulse 3s ease-in-out infinite;
+      filter: drop-shadow(0 0 40px rgba(255, 87, 51, 0.8));
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 40px rgba(255, 87, 51, 0.8));
+      }
+      50% {
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 60px rgba(255, 214, 10, 0.9));
+      }
+    }
+
+    .welcome-screen h1 {
+      font-family: 'Audiowide', cursive;
+      font-size: 4.8em;
+      font-weight: 700;
+      margin-bottom: 25px;
+      background: linear-gradient(135deg, #ff5733 0%, #ffd60a 50%, #00b4d8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-transform: uppercase;
+      letter-spacing: 8px;
+      animation: textShine 4s ease-in-out infinite;
+      position: relative;
+    }
+
+    @keyframes textShine {
+      0%, 100% {
+        filter: drop-shadow(0 0 30px rgba(255, 87, 51, 0.7));
+      }
+      50% {
+        filter: drop-shadow(0 0 50px rgba(255, 214, 10, 0.9));
+      }
+    }
+
+    .welcome-screen p {
+      font-size: 1.4em;
+      margin-bottom: 50px;
+      opacity: 0.95;
+      font-weight: 400;
+      line-height: 1.8;
+      color: #ffd60a;
+      text-shadow: 0 0 20px rgba(255, 214, 10, 0.4);
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 35px;
+      margin-bottom: 60px;
+    }
+
+    .feature-item {
+      padding: 35px 25px;
+      background: linear-gradient(135deg, rgba(255, 87, 51, 0.1) 0%, rgba(0, 180, 216, 0.08) 100%);
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 87, 51, 0.3);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      animation: fadeIn 1s ease-out forwards;
+      opacity: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-item::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(45deg, transparent, rgba(255, 214, 10, 0.2), transparent);
+      transform: rotate(45deg);
+      transition: all 0.6s;
+    }
+
+    .feature-item:hover::before {
+      left: 100%;
+      top: 100%;
+    }
+
+    .feature-item:nth-child(1) { animation-delay: 0.2s; }
+    .feature-item:nth-child(2) { animation-delay: 0.4s; }
+    .feature-item:nth-child(3) { animation-delay: 0.6s; }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    .feature-item:hover {
+      transform: translateY(-12px) scale(1.05);
+      border-color: rgba(255, 214, 10, 0.7);
+      box-shadow: 0 25px 70px rgba(255, 87, 51, 0.5);
+    }
+
+    .feature-item .icon {
+      font-size: 3.2em;
+      margin-bottom: 18px;
+      filter: drop-shadow(0 0 20px rgba(255, 214, 10, 0.6));
+    }
+
+    .feature-item h3 {
+      font-family: 'Audiowide', cursive;
+      font-size: 1.4em;
+      margin-bottom: 12px;
+      font-weight: 700;
+      color: #ff5733;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .feature-item p {
+      font-size: 1.05em;
+      opacity: 0.9;
+      color: #ffd60a;
+    }
+
+    .start-btn {
+      padding: 28px 80px;
+      font-size: 1.5em;
+      font-weight: 700;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #ff5733 0%, #ffd60a 100%);
+      color: #0d0208;
+      box-shadow: 0 15px 50px rgba(255, 87, 51, 0.6);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      overflow: hidden;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      font-family: 'Audiowide', cursive;
+      border: 3px solid rgba(255, 214, 10, 0.4);
+    }
+
+    .start-btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.4);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .start-btn:hover::before {
+      width: 400px;
+      height: 400px;
+    }
+
+    .start-btn:hover {
+      transform: translateY(-10px) scale(1.08);
+      box-shadow: 0 25px 80px rgba(255, 214, 10, 0.8);
+      border-color: rgba(0, 180, 216, 0.8);
+    }
+
+    /* Main App */
+    .main-app {
+      display: none;
+      padding: 20px;
+      animation: slideIn 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      z-index: 1;
+    }
+
+    .main-app.active {
+      display: block;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(100px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 50px;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    header h1 {
+      font-family: 'Audiowide', cursive;
+      font-size: 3.8em;
+      font-weight: 700;
+      margin-bottom: 18px;
+      background: linear-gradient(135deg, #ff5733 0%, #ffd60a 50%, #00b4d8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-transform: uppercase;
+      letter-spacing: 6px;
+      filter: drop-shadow(0 0 35px rgba(255, 87, 51, 0.7));
+    }
+
+    .subtitle {
+      font-size: 1.25em;
+      opacity: 0.95;
+      font-weight: 400;
+      color: #ffd60a;
+      letter-spacing: 1.5px;
+    }
+
+    .upload-section {
+      background: linear-gradient(135deg, rgba(255, 87, 51, 0.1) 0%, rgba(0, 180, 216, 0.08) 100%);
+      backdrop-filter: blur(20px);
+      border-radius: 30px;
+      padding: 55px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.7);
+      margin-bottom: 45px;
+      border: 2px solid rgba(255, 87, 51, 0.4);
+      transition: transform 0.4s ease;
+    }
+
+    .upload-section:hover {
+      transform: translateY(-10px);
+      border-color: rgba(255, 214, 10, 0.6);
+    }
+
+    .drop-zone {
+      border: 4px dashed rgba(255, 214, 10, 0.5);
+      border-radius: 25px;
+      padding: 75px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.4s ease;
+      background: linear-gradient(135deg, rgba(255, 87, 51, 0.05) 0%, rgba(0, 180, 216, 0.03) 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .drop-zone::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 214, 10, 0.25) 0%, transparent 70%);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .drop-zone:hover::before {
+      width: 600px;
+      height: 600px;
+    }
+
+    .drop-zone.dragover {
+      border-color: #ff5733;
+      background: rgba(255, 87, 51, 0.15);
+      transform: scale(1.03);
+      box-shadow: inset 0 0 60px rgba(255, 214, 10, 0.4);
+    }
+
+    .drop-zone-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .upload-icon {
+      font-size: 6.5em;
+      margin-bottom: 28px;
+      animation: bounce 2.8s infinite;
+      filter: drop-shadow(0 0 25px rgba(255, 214, 10, 0.7));
+    }
+
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0) rotate(0deg);
+      }
+      40% {
+        transform: translateY(-30px) rotate(-10deg);
+      }
+      60% {
+        transform: translateY(-18px) rotate(5deg);
+      }
+    }
+
+    .drop-zone p {
+      font-size: 1.4em;
+      margin-bottom: 18px;
+      font-weight: 600;
+      color: #ffd60a;
+      letter-spacing: 1.5px;
+    }
+
+    .drop-zone .file-name {
+      margin-top: 22px;
+      font-weight: 700;
+      color: #ff5733;
+      font-size: 1.3em;
+      text-shadow: 0 0 18px rgba(255, 87, 51, 0.6);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 25px;
+      justify-content: center;
+      margin-top: 45px;
+    }
+
+    .btn {
+      padding: 22px 55px;
+      font-size: 1.2em;
+      font-weight: 700;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      overflow: hidden;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      font-family: 'Audiowide', cursive;
+      border: 3px solid transparent;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .btn:hover::before {
+      width: 400px;
+      height: 400px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #ff5733 0%, #ffd60a 100%);
+      color: #0d0208;
+      box-shadow: 0 12px 35px rgba(255, 87, 51, 0.6);
+      border-color: rgba(255, 214, 10, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-6px) scale(1.08);
+      box-shadow: 0 18px 50px rgba(255, 214, 10, 0.8);
+      border-color: rgba(0, 180, 216, 0.8);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #00b4d8 0%, #ff5733 100%);
+      color: #0d0208;
+      box-shadow: 0 12px 35px rgba(0, 180, 216, 0.5);
+      border-color: rgba(255, 87, 51, 0.4);
+    }
+
+    .btn-secondary:hover {
+      transform: translateY(-6px) scale(1.08);
+      box-shadow: 0 18px 50px rgba(0, 180, 216, 0.8);
+      border-color: rgba(255, 214, 10, 0.8);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      margin: 45px 0;
+    }
+
+    .loading.active {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .spinner {
+      border: 7px solid rgba(255, 87, 51, 0.2);
+      border-radius: 50%;
+      border-top: 7px solid #ff5733;
+      border-right: 7px solid #ffd60a;
+      border-bottom: 7px solid #00b4d8;
+      width: 90px;
+      height: 90px;
+      animation: spin 1.4s linear infinite;
+      margin: 0 auto 28px;
+      box-shadow: 0 0 40px rgba(255, 214, 10, 0.6);
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading p {
+      font-size: 1.5em;
+      font-weight: 600;
+      color: #ffd60a;
+      letter-spacing: 1.5px;
+    }
+
+    .video-section, .results-section {
+      background: linear-gradient(135deg, rgba(255, 87, 51, 0.1) 0%, rgba(0, 180, 216, 0.08) 100%);
+      backdrop-filter: blur(20px);
+      border-radius: 30px;
+      padding: 50px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.7);
+      margin-bottom: 45px;
+      border: 2px solid rgba(255, 87, 51, 0.4);
+      display: none;
+      animation: fadeIn 0.8s ease;
+    }
+
+    .video-section.active, .results-section.active {
+      display: block;
+    }
+
+    .video-section h2, .results-section h2 {
+      margin-bottom: 35px;
+      font-size: 2.5em;
+      font-weight: 700;
+      font-family: 'Audiowide', cursive;
+      color: #ff5733;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      text-shadow: 0 0 25px rgba(255, 87, 51, 0.6);
+    }
+
+    #videoPlayer {
+      width: 100%;
+      border-radius: 25px;
+      box-shadow: 0 25px 70px rgba(0,0,0,0.8);
+      border: 3px solid rgba(255, 214, 10, 0.4);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 35px;
+      margin-bottom: 55px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, rgba(255, 87, 51, 0.2) 0%, rgba(0, 180, 216, 0.15) 100%);
+      backdrop-filter: blur(10px);
+      padding: 40px;
+      border-radius: 25px;
+      text-align: center;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      animation: scaleIn 0.6s ease;
+      border: 3px solid rgba(255, 214, 10, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: -100%;
+      left: -100%;
+      width: 300%;
+      height: 300%;
+      background: linear-gradient(45deg, transparent, rgba(255, 214, 10, 0.15), transparent);
+      transform: rotate(45deg);
+      animation: shimmer 4s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+      100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+    }
+
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.7) rotateY(30deg);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) rotateY(0deg);
+      }
+    }
+
+    .stat-card:hover {
+      transform: translateY(-12px) scale(1.08);
+      box-shadow: 0 25px 70px rgba(255, 87, 51, 0.6);
+      border-color: rgba(0, 180, 216, 0.8);
+    }
+
+    .stat-card .value {
+      font-size: 3.5em;
+      font-weight: 900;
+      margin: 22px 0;
+      background: linear-gradient(135deg, #ff5733 0%, #ffd60a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-family: 'Audiowide', cursive;
+      position: relative;
+      z-index: 1;
+    }
+
+    .stat-card .label {
+      font-size: 1.05em;
+      opacity: 0.95;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      font-weight: 600;
+      color: #ffd60a;
+      position: relative;
+      z-index: 1;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 35px;
+      overflow: hidden;
+      border-radius: 20px;
+      background: rgba(255, 87, 51, 0.05);
+    }
+
+    thead {
+      background: linear-gradient(135deg, rgba(255, 87, 51, 0.3) 0%, rgba(0, 180, 216, 0.2) 100%);
+    }
+
+    th, td {
+      padding: 22px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    th {
+      font-family: 'Audiowide', cursive;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      font-size: 1.05em;
+      color: #ff5733;
+      text-shadow: 0 0 12px rgba(255, 87, 51, 0.6);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(255, 87, 51, 0.2);
+      transition: all 0.3s ease;
+      animation: slideInTable 0.6s ease;
+    }
+
+    @keyframes slideInTable {
+      from {
+        opacity: 0;
+        transform: translateX(-40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    tbody tr:hover {
+      background: rgba(255, 87, 51, 0.2);
+      transform: scale(1.02);
+      box-shadow: 0 8px 25px rgba(255, 214, 10, 0.4);
+    }
+
+    .speed-badge {
+      padding: 12px 28px;
+      border-radius: 30px;
+      font-weight: 700;
+      display: inline-block;
+      font-size: 1.2em;
+      letter-spacing: 2px;
+      font-family: 'Audiowide', cursive;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4);
+    }
+
+    .speed-normal {
+      background: linear-gradient(135deg, #00b4d8, #0077b6);
+      color: #0d0208;
+      box-shadow: 0 6px 22px rgba(0, 180, 216, 0.6);
+    }
+
+    .speed-warning {
+      background: linear-gradient(135deg, #ffd60a, #ff9500);
+      color: #0d0208;
+      box-shadow: 0 6px 22px rgba(255, 214, 10, 0.6);
+    }
+
+    .speed-danger {
+      background: linear-gradient(135deg, #ff5733, #c9184a);
+      color: #fff;
+      box-shadow: 0 6px 22px rgba(255, 87, 51, 0.7);
+    }
+
+    @media (max-width: 768px) {
+      .welcome-screen h1 {
+        font-size: 3em;
+      }
+
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+
+      header h1 {
+        font-size: 2.8em;
+      }
+
+      .upload-section {
+        padding: 35px;
+      }
+
+      .btn-group {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-pattern"></div>
+  
+  <!-- Welcome Screen -->
+  <div class="welcome-screen" id="welcomeScreen">
+    <div class="welcome-content">
+      <div class="welcome-icon">🏁</div>
+      <h1>SpeedVision AI</h1>
+      <p>Advanced AI-powered vehicle speed detection and tracking system. Upload your traffic video and let our intelligent algorithms analyze vehicle speeds with precision.</p>
+      
+      <div class="feature-grid">
+        <div class="feature-item">
+          <div class="icon">🎯</div>
+          <h3>Accurate Detection</h3>
+          <p>Real-time object tracking with YOLO</p>
+        </div>
+        <div class="feature-item">
+          <div class="icon">📊</div>
+          <h3>Detailed Analytics</h3>
+          <p>Comprehensive speed statistics</p>
+        </div>
+        <div class="feature-item">
+          <div class="icon">⚡</div>
+          <h3>Fast Processing</h3>
+          <p>Optimized video analysis</p>
+        </div>
+      </div>
+
+      <button class="start-btn" id="getStartedBtn">Get Started</button>
+    </div>
+  </div>
+
+  <!-- Main Application -->
+  <div class="main-app" id="mainApp">
+    <div class="container">
+      <header>
+        <h1>🏁 SpeedVision AI</h1>
+        <p class="subtitle">Upload a video to detect and track vehicle speeds</p>
+      </header>
+
+      <div class="upload-section">
+        <div class="drop-zone" id="dropZone">
+          <div class="drop-zone-content">
+            <div class="upload-icon">📹</div>
+            <p>Drag & Drop your video here</p>
+            <p style="font-size: 1em; opacity: 0.85;">or click to browse</p>
+            <div class="file-name" id="fileName"></div>
+          </div>
+        </div>
+        <input type="file" id="videoFile" accept="video/*" />
+        
+        <div class="btn-group">
+          <button class="btn btn-primary" id="uploadBtn" disabled>
+            <span>🚀 Analyze Video</span>
+          </button>
+          <button class="btn btn-secondary" id="resetBtn" style="display: none;">
+            <span>🔄 Upload New Video</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Processing video... This may take a few moments</p>
+      </div>
+
+      <div class="video-section" id="videoSection">
+        <h2>📺 Processed Video</h2>
+        <video id="videoPlayer" controls></video>
+      </div>
+
+      <div class="results-section" id="resultsSection">
+        <h2>📊 Detection Results</h2>
+        
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Vehicle ID</th>
+              <th>Max Speed</th>
+              <th>Avg Speed</th>
+              <th>Median Speed</th>
+              <th>Frames Tracked</th>
+            </tr>
+          </thead>
+          <tbody id="resultsTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const welcomeScreen = document.getElementById("welcomeScreen");
+    const mainApp = document.getElementById("mainApp");
+    const getStartedBtn = document.getElementById("getStartedBtn");
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("videoFile");
+    const fileName = document.getElementById("fileName");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const loading = document.getElementById("loading");
+    const videoSection = document.getElementById("videoSection");
+    const resultsSection = document.getElementById("resultsSection");
+    const videoPlayer = document.getElementById("videoPlayer");
+    const resultsTable = document.getElementById("resultsTable");
+    const statsGrid = document.getElementById("statsGrid");
+
+    let selectedFile = null;
+
+    // Get Started transition
+    getStartedBtn.addEventListener("click", () => {
+      welcomeScreen.classList.add("hidden");
+      setTimeout(() => {
+        mainApp.classList.add("active");
+      }, 500);
+    });
+
+    // Click to browse
+    dropZone.addEventListener("click", () => fileInput.click());
+
+    // Drag and drop handlers
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFileSelect(files[0]);
+      }
+    });
+
+    // File input change
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files.length > 0) {
+        handleFileSelect(e.target.files[0]);
+      }
+    });
+
+    function handleFileSelect(file) {
+      if (!file.type.startsWith('video/')) {
+        alert('Please select a valid video file');
+        return;
+      }
+
+      selectedFile = file;
+      fileName.textContent = `✓ ${file.name}`;
+      uploadBtn.disabled = false;
+    }
+
+    // Upload and process
+    uploadBtn.addEventListener("click", async () => {
+      if (!selectedFile) {
+        alert("Please select a video file first!");
+        return;
+      }
+
+      uploadBtn.disabled = true;
+      loading.classList.add("active");
+      videoSection.classList.remove("active");
+      resultsSection.classList.remove("active");
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      try {
+        const response = await fetch("http://127.0.0.1:8000/predict", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error("Error processing video");
+        }
+
+        const data = await response.json();
+        
+        loading.classList.remove("active");
+        
+        // Show video
+        videoSection.classList.add("active");
+        videoPlayer.src = data.video_url;
+        videoPlayer.load();
+
+        // Show results
+        displayResults(data);
+        
+        resetBtn.style.display = "inline-block";
+        
+      } catch (error) {
+        loading.classList.remove("active");
+        alert("Error: " + error.message);
+        uploadBtn.disabled = false;
+      }
+    });
+
+    function displayResults(data) {
+      resultsSection.classList.add("active");
+
+      // Display statistics cards
+      statsGrid.innerHTML = `
+        <div class="stat-card" style="animation-delay: 0.1s">
+          <div class="label">Total Vehicles</div>
+          <div class="value">${data.vehicles_detected}</div>
+        </div>
+        <div class="stat-card" style="animation-delay: 0.2s">
+          <div class="label">Frames Processed</div>
+          <div class="value">${data.frames_processed}</div>
+        </div>
+        <div class="stat-card" style="animation-delay: 0.3s">
+          <div class="label">Video FPS</div>
+          <div class="value">${data.fps}</div>
+        </div>
+        <div class="stat-card" style="animation-delay: 0.4s">
+          <div class="label">Status</div>
+          <div class="value" style="font-size: 2.2em;">${data.calibration_status === 'valid' ? '✅' : '⚠️'}</div>
+        </div>
+      `;
+
+      // Display vehicle table
+      resultsTable.innerHTML = "";
+      
+      if (Object.keys(data.statistics).length === 0) {
+        resultsTable.innerHTML = '<tr><td colspan="5">No vehicles detected</td></tr>';
+        return;
+      }
+
+      Object.entries(data.statistics).forEach(([id, stats], index) => {
+        const row = document.createElement("tr");
+        row.style.animationDelay = `${index * 0.05}s`;
+        
+        const maxSpeed = stats.max_speed;
+        let speedClass = 'speed-normal';
+        if (maxSpeed > 100) speedClass = 'speed-danger';
+        else if (maxSpeed > 80) speedClass = 'speed-warning';
+        
+        const medianSpeed = stats.median_speed || stats.avg_speed;
+        
+        row.innerHTML = `
+          <td><strong>#${id}</strong></td>
+          <td><span class="speed-badge ${speedClass}">${maxSpeed} km/h</span></td>
+          <td>${stats.avg_speed} km/h</td>
+          <td>${medianSpeed} km/h</td>
+          <td>${stats.frame_count}</td>
+        `;
+        resultsTable.appendChild(row);
+      });
+    }
+
+    // Reset button
+    resetBtn.addEventListener("click", () => {
+      selectedFile = null;
+      fileName.textContent = "";
+      fileInput.value = "";
+      uploadBtn.disabled = true;
+      resetBtn.style.display = "none";
+      videoSection.classList.remove("active");
+      resultsSection.classList.remove("active");
+    });
+  </script>
+</body>
+</html>
